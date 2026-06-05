@@ -17,6 +17,30 @@ namespace Banking.Application.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
+        public async Task<IEnumerable<DipendenteResponseDto>> GetAllDipendentiAsync()
+        {
+            var dipendenti = await _unitOfWork.Dipendenti.GetAllAsync();
+            return dipendenti.Select(MapToResponseDto);
+        }
+
+        public async Task<IEnumerable<DipendenteResponseDto>> GetDipendentiByRuoloAsync(string ruolo)
+        {
+            var dipendenti = await _unitOfWork.Dipendenti.FindAsync(d => d.Ruolo == ruolo);
+            return dipendenti.Select(MapToResponseDto);
+        }
+
+        public async Task<IEnumerable<DipendenteResponseDto>> GetDipendentiBySedeAsync(string sede)
+        {
+            var dipendenti = await _unitOfWork.Dipendenti.FindAsync(d => d.Filiale.Citta == sede);
+            return dipendenti.Select(MapToResponseDto);
+        }
+
+        public async Task<IEnumerable<DipendenteResponseDto>> GetDipendentiByRuoloAndSedeAsync(string ruolo, string sede)
+        {
+            var dipendenti = await _unitOfWork.Dipendenti.FindAsync(d => d.Ruolo == ruolo && d.Filiale.Citta == sede);
+            return dipendenti.Select(MapToResponseDto);
+        }
+
         public async Task<DipendenteResponseDto?> GetDipendenteByIdAsync(int id)
         {
             var dipendente = await _unitOfWork.Dipendenti.GetByIdAsync(id);
@@ -50,7 +74,7 @@ namespace Banking.Application.Services
                 Matricola = dto.Matricola,
                 Nome = dto.Nome,
                 Cognome = dto.Cognome,
-                Ruolo = dto.Ruolo, // es: CASSIERE, DIRETTORE, CONSULENTE
+                Ruolo = dto.Ruolo,
                 FilialeId = dto.FilialeId
             };
 
@@ -58,6 +82,36 @@ namespace Banking.Application.Services
             await _unitOfWork.SaveChangesAsync();
 
             return MapToResponseDto(nuovoDipendente);
+        }
+
+        public async Task<DipendenteResponseDto> AggiornaDipendenteAsync(int id, DipendenteResponseDto dto)
+        {
+            var dipendente = await _unitOfWork.Dipendenti.GetByIdAsync(id);
+            if (dipendente == null)
+                throw new InvalidOperationException("Dipendente non trovato.");
+
+            dipendente.Matricola = dto.Matricola;
+            dipendente.Nome = dto.Nome;
+            dipendente.Cognome = dto.Cognome;
+            dipendente.Ruolo = dto.Ruolo;
+            dipendente.FilialeId = dto.FilialeId;
+
+            _unitOfWork.Dipendenti.Update(dipendente);
+            await _unitOfWork.SaveChangesAsync();
+
+            return MapToResponseDto(dipendente);
+        }
+
+        public async Task DeleteDipendenteAsync(string id, string motivazione)
+        {
+            var dipendente = await _unitOfWork.Dipendenti.GetByMatricolaAsync(id);
+            if (dipendente == null)
+                throw new InvalidOperationException("Dipendente non trovato.");
+
+            // Qui puoi gestire la motivazione (log, audit, ecc.)
+
+            _unitOfWork.Dipendenti.Delete(dipendente);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         private static DipendenteResponseDto MapToResponseDto(Dipendente d)

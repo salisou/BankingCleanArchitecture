@@ -23,16 +23,27 @@ try
 {
     Log.Information("Avvio dell'applicazione Banking API...");
 
-    // Add services to the container. 
-    // for migrations:      -> dotnet ef migrations add InitialCreate --project src/Banking.Infrastructure --startup-project src/Banking.WebApi
-    // for update database: -> dotnet ef database update --project src/Banking.Infrastructure --startup-project src/Banking.WebApi
-    builder.Services.AddDbContext<BankingDbContext>(options =>
+    // 1. Configurazione CORS
+    var corsPolicyName = "AllowAllOrigins"; // puoi personalizzare il nome e le origini
+    builder.Services.AddCors(options =>
     {
-        options.UseSqlite(
-            builder.Configuration.GetConnectionString("DefaultConnection"));
+        options.AddPolicy(name: corsPolicyName,
+            policy =>
+            {
+                policy
+                    .AllowAnyOrigin()    // In produzione valuta di specificare gli origin consentiti con .WithOrigins("https://tuo-dominio.com")
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+            });
     });
 
-    // 2. Registrazione dello strato Infrastruttura (Repository e Unit of Work)
+    // 2. Configurazione DbContext
+    builder.Services.AddDbContext<BankingDbContext>(options =>
+    {
+        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+    });
+
+    // 3. Registrazione Repository e Unit of Work
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
     builder.Services.AddScoped<IFilialeRepository, FilialeRepository>();
     builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
@@ -45,7 +56,7 @@ try
     builder.Services.AddScoped<IRataPrestitoRepository, RataPrestitoRepository>();
     builder.Services.AddScoped<IPortafoglioTitoliRepository, PortafoglioTitoliRepository>();
 
-    // 3. Registrazione dello strato Applicativo (Servizi di Business)
+    // 4. Registrazione Servizi di Business
     builder.Services.AddScoped<IClienteService, ClienteService>();
     builder.Services.AddScoped<IContoCorrenteService, ContoCorrenteService>();
     builder.Services.AddScoped<IDipendenteService, DipendenteService>();
@@ -57,22 +68,22 @@ try
     builder.Services.AddScoped<IRataPrestitoService, RataPrestitoService>();
     builder.Services.AddScoped<IPortafoglioTitoliService, PortafoglioTitoliService>();
 
-    // 4. Registrazione dei Controller
+    // 5. Registrazione Controller
     builder.Services.AddControllers();
 
-    // 5. Registrazione dei servizi di Autorizzazione
+    // 6. Autorizzazione
     builder.Services.AddAuthorization();
 
-    // 6. Registrazione di AutoMapper
+    // 7. AutoMapper
     builder.Services.AddAutoMapper(typeof(Banking.Application.Mappings.MappingProfile));
 
-    // 7. Configurazione OpenAPI / Swagger
+    // 8. OpenAPI / Swagger
     builder.Services.AddOpenApi();
     builder.Services.AddSwaggerGen(c =>
     {
-        c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
-        { 
-            Title = "Banking API", 
+        c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+        {
+            Title = "Banking API",
             Version = "v1",
             Description = "API per la gestione di operazioni bancarie"
         });
@@ -80,7 +91,11 @@ try
 
     var app = builder.Build();
 
-    // Configure the HTTP request pipeline.
+    // 9. Middleware pipeline
+
+    // Usa CORS prima di qualsiasi middleware che gestisce le richieste
+    app.UseCors(corsPolicyName);
+
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
@@ -93,9 +108,9 @@ try
     }
 
     app.UseHttpsRedirection();
+
     app.UseAuthorization();
 
-    // Mappa automaticamente i Controller esposti (es. [ApiController] / [Route("api/[controller]")])
     app.MapControllers();
 
     Log.Information("Applicazione avviata con successo!");
