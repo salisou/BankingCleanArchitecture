@@ -6,6 +6,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Banking.Application.Services;
 
+/// <summary>
+/// Chiama MCP Server 
+/// QUesto servizio Gestisce la carta di credito del cliente 
+/// </summary>
 public class CartaService : ICartaService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -19,6 +23,10 @@ public class CartaService : ICartaService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Restituisce la lista di tutte le carte che esistenono nel sistema bancario 
+    /// </summary>
+    /// <returns></returns>
     public async Task<IEnumerable<CartaResponseDto>> GetAllCartesAsync()
     {
         try
@@ -100,6 +108,13 @@ public class CartaService : ICartaService
         }
     }
 
+
+    /// <summary>
+    /// Rimuove la carta di credito dal sistema ma salva in una tabella invece di cancellarla
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public async Task DeleteCartaAsync(int id)
     {
         try
@@ -124,7 +139,11 @@ public class CartaService : ICartaService
             throw;
         }
     }
-
+    /// <summary>
+    /// Questo permette di restituire conto corrente legata alla carta di credito usando l'id corrente del parametro 
+    /// </summary>
+    /// <param name="contoCorrenteId"></param>
+    /// <returns></returns>
     public async Task<IEnumerable<CartaResponseDto>> GetCarteByContoCorrenteAsync(int contoCorrenteId)
     {
         try
